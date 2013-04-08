@@ -21,7 +21,7 @@ import System.Directory
 import Control.Applicative        
 import System.Environment
 
---This function check the first and last characters of a string for punctuation and removes them          
+-- |Checks the first and last characters of a string for punctuation and removes them
 alphabet = ['a'..'z'] ++ ['A'..'Z'] ++ ['\'']
 
 clean :: [String] -> [String] 
@@ -38,16 +38,20 @@ clean (x:xs)
     where badhead = head x `notElem` alphabet
           badtail = last x `notElem` alphabet
 
+-- |Maps to lower across a list of strings (frequencies are case-insensitive)                    
 makeLower :: [String] -> [String]
 makeLower = map (map toLower)
                      
-toList :: [String] -> Map String Int
-toList xs = trans xs M.empty --pass in an empty map to be populated
+-- |Passes in an empty map to be populated
+toMap :: [String] -> Map String Int
+toMap xs = trans xs M.empty 
 
+-- |Wrapper function for addCount
 trans :: [String] -> Map String Int -> Map String Int
 trans [] list = list
 trans (x:xs) list = trans xs $ addCount ((clean . makeLower . words) x) list 
 
+-- |Adds occurrences of words to an immutable map
 addCount :: [String] -> Map String Int -> Map String Int
 addCount [] list = list
 addCount (x:xs) list = case M.lookup x list of
@@ -55,6 +59,7 @@ addCount (x:xs) list = case M.lookup x list of
     Just (val) -> addCount xs $ M.update inc x list where
       inc num = Just num >>= \x -> Just (x+1)
 
+-- |Builds string output from map, calculates proper spacing
 printMap :: Map String Int -> String
 printMap m = M.foldWithKey f id m "" where
     longestkey key = ((getMaxKey m) - (length key))
@@ -64,21 +69,26 @@ printMap m = M.foldWithKey f id m "" where
     f key val r = r . ((key ++ (concat $ replicate (longestkey key) " ") ++ "  " ++
                         (replicate (val `div` linearscale) '#') ++ "\n") ++)
 
+-- |Helper function to retrieve the maximum key (largest word) in the map                  
 getMaxKey:: Map String Int -> Int                  
 getMaxKey m = maximum $ map (length . fst) (M.toList m)                  
 
+-- |Output should be in descending order by highest frequency
 sorter :: [Char] -> [Char] -> Ordering
 sorter a b = compare (len b) (len a) where
     len = (length . filter (=='#')) 
 
+-- |Main method wrapper
 main :: IO()          
 main = E.catch toTry handler
                     
+-- |Main method body
 toTry :: IO() 
 toTry = do
   (file:xs) <- getArgs
   contents <- readFile file
-  mapM_ putStrLn $ (sortBy sorter . filter ('#' `elem`) . lines . printMap . Main.toList) [contents]
+  mapM_ putStrLn $ (sortBy sorter . filter ('#' `elem`) . lines . printMap . toMap) [contents]
 
+-- |Error handler  
 handler :: IOError -> IO ()
 handler e = putStrLn "That file does not exist!"

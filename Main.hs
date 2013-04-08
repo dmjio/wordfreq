@@ -22,14 +22,10 @@ import Control.Applicative
 import System.Environment
 
 -- |Checks the first and last characters of a string for punctuation and removes them
-alphabet = ['a'..'z'] ++ ['A'..'Z'] ++ ['\'']
-
 clean :: [String] -> [String] 
 clean [] = []
 clean ([]:xs) = clean xs
-clean ([x]:xs) = case x `elem` alphabet of
-                   True -> [x] : clean xs
-                   False -> clean xs
+clean ([x]:xs) = if x `elem` alphabet then [x] : clean xs else clean xs
 clean (x:xs) 
     | badhead && badtail = (tail . init) x : clean xs
     | badhead = tail x : clean xs
@@ -38,7 +34,9 @@ clean (x:xs)
     where badhead = head x `notElem` alphabet
           badtail = last x `notElem` alphabet
 
--- |Maps to lower across a list of strings (frequencies are case-insensitive)                    
+alphabet = ['a'..'z'] ++ ['A'..'Z'] ++ "'"
+                               
+-- |Maps to lower across a list of strings (frequencies are case-insensitive)
 makeLower :: [String] -> [String]
 makeLower = map (map toLower)
                      
@@ -49,34 +47,34 @@ toMap xs = trans xs M.empty
 -- |Wrapper function for addCount
 trans :: [String] -> Map String Int -> Map String Int
 trans [] list = list
-trans (x:xs) list = trans xs $ addCount ((clean . makeLower . words) x) list 
+trans xs list = L.foldl (\ list x -> addCount ((clean . makeLower . words) x) list) list xs
 
 -- |Adds occurrences of words to an immutable map
 addCount :: [String] -> Map String Int -> Map String Int
 addCount [] list = list
 addCount (x:xs) list = case M.lookup x list of
     Nothing -> addCount xs $ M.insert x 1 list
-    Just (val) -> addCount xs $ M.update inc x list where
+    Just val -> addCount xs $ M.update inc x list where
       inc num = Just num >>= \x -> Just (x+1)
 
 -- |Builds string output from map, calculates proper spacing
 printMap :: Map String Int -> String
 printMap m = M.foldWithKey f id m "" where
-    longestkey key = ((getMaxKey m) - (length key))
-    longestval = (maximum $ map snd $ M.toList m) + (getMaxKey m)
+    longestkey key = getMaxKey m - length key
+    longestval = maximum (map snd $ M.toList m) + getMaxKey m
     linearscale = (longestval `div` 80) + 1
-    f :: String -> Int -> (String -> String) -> (String -> String)
-    f key val r = r . ((key ++ (concat $ replicate (longestkey key) " ") ++ "  " ++
-                        (replicate (val `div` linearscale) '#') ++ "\n") ++)
+    f :: String -> Int -> (String -> String) -> String -> String
+    f key val r = r . ((key ++ concat (replicate (longestkey key) " ") ++ "  " ++
+                        replicate (val `div` linearscale) '#' ++ "\n") ++)
 
--- |Helper function to retrieve the maximum key (largest word) in the map                  
+-- |Helper function to retrieve the maximum key (largest word) in the map
 getMaxKey:: Map String Int -> Int                  
 getMaxKey m = maximum $ map (length . fst) (M.toList m)                  
 
 -- |Output should be in descending order by highest frequency
-sorter :: [Char] -> [Char] -> Ordering
+sorter :: String -> String -> Ordering
 sorter a b = compare (len b) (len a) where
-    len = (length . filter (=='#')) 
+    len = length . filter (=='#') 
 
 -- |Main method wrapper
 main :: IO()          

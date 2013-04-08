@@ -37,7 +37,7 @@ maintainer:          djohnson.m@gmail.com
 -- A copyright notice.
 -- copyright:           
 
-category:            Data
+category:            Utility
 
 build-type:          Simple
 
